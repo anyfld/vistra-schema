@@ -1,0 +1,71 @@
+name: Main CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  all-status-check:
+    name: all-status-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - buf-format
+      - buf-gen
+      - buf-lint
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check all-status-check
+        run: |
+          diff \
+            <(yq ".jobs | del(.all-status-check) | keys.[]" .github/workflows/ci.yml) \
+            <(yq ".jobs.all-status-check.needs.[]" .github/workflows/ci.yml)
+      - name: All status check
+        run: echo "All status checks passed"
+
+  buf-format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: bufbuild/buf-action@275c46df241e678db8e3ff3969ecb24b0b9001c5 # V1.0.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          setup_only: true
+      - name: buf format check
+        run: buf format --diff --exit-code
+
+  buf-gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: bufbuild/buf-action@275c46df241e678db8e3ff3969ecb24b0b9001c5 # V1.0.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          setup_only: true
+      - name: buf generate
+        run: buf generate --error-format github-actions
+
+  buf-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: bufbuild/buf-action@275c46df241e678db8e3ff3969ecb24b0b9001c5 # V1.0.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          setup_only: true
+      - name: buf lint
+        run: buf lint --error-format github-actions
