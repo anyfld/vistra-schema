@@ -15,11 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs:
-      - buf-format
+      - buf
       - buf-gen
-      - buf-lint
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - name: Check all-status-check
         run: |
           diff \
@@ -28,19 +27,17 @@ jobs:
       - name: All status check
         run: echo "All status checks passed"
 
-  buf-format:
+  buf:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: bufbuild/buf-action@275c46df241e678db8e3ff3969ecb24b0b9001c5 # V1.0.1
+      - uses: bufbuild/buf-action@v1.3.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          setup_only: true
-      - name: buf format check
-        run: buf format --diff --exit-code
+          push: false
 
   buf-gen:
     runs-on: ubuntu-latest
@@ -49,23 +46,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: bufbuild/buf-action@275c46df241e678db8e3ff3969ecb24b0b9001c5 # V1.0.1
+      - uses: bufbuild/buf-action@v1.3.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           setup_only: true
       - name: buf generate
         run: buf generate --error-format github-actions
-
-  buf-lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: bufbuild/buf-action@275c46df241e678db8e3ff3969ecb24b0b9001c5 # V1.0.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          setup_only: true
-      - name: buf lint
-        run: buf lint --error-format github-actions
