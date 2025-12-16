@@ -1,0 +1,56 @@
+name: Main CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  all-status-check:
+    name: all-status-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - buf
+      - buf-gen
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check all-status-check
+        run: |
+          diff \
+            <(yq ".jobs | del(.all-status-check) | keys.[]" .github/workflows/ci.yml) \
+            <(yq ".jobs.all-status-check.needs.[]" .github/workflows/ci.yml)
+      - name: All status check
+        run: echo "All status checks passed"
+
+  buf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: bufbuild/buf-action@v1.3.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          push: false
+          breaking_against: ${{ github.event_name == 'pull_request' && format('https://github.com/{0}.git#branch={1}', github.repository, github.base_ref) || '' }}
+
+  buf-gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: bufbuild/buf-action@v1.3.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          setup_only: true
+      - name: buf generate
+        run: buf generate --error-format github-actions
