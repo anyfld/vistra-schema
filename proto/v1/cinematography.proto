@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package v1;
+
+option go_package = "github.com/anyfld/vistra-operation-control-room/gen/proto/v1;protov1";
+
+// ショット種別
+enum ShotType {
+  SHOT_TYPE_UNSPECIFIED = 0;
+  SHOT_TYPE_EXTREME_WIDE = 1; // エクストリームワイド
+  SHOT_TYPE_WIDE = 2; // ワイドショット
+  SHOT_TYPE_FULL = 3; // フルショット
+  SHOT_TYPE_MEDIUM = 4; // ミディアムショット
+  SHOT_TYPE_MEDIUM_CLOSE_UP = 5; // ミディアムクローズアップ
+  SHOT_TYPE_CLOSE_UP = 6; // クローズアップ
+  SHOT_TYPE_EXTREME_CLOSE_UP = 7; // エクストリームクローズアップ
+}
+
+// カメラアングル
+enum CameraAngle {
+  CAMERA_ANGLE_UNSPECIFIED = 0;
+  CAMERA_ANGLE_EYE_LEVEL = 1; // アイレベル
+  CAMERA_ANGLE_LOW = 2; // ローアングル
+  CAMERA_ANGLE_HIGH = 3; // ハイアングル
+  CAMERA_ANGLE_BIRDS_EYE = 4; // 俯瞰
+  CAMERA_ANGLE_DUTCH = 5; // ダッチアングル
+}
+
+// カメラムーブメント
+enum CameraMovement {
+  CAMERA_MOVEMENT_UNSPECIFIED = 0;
+  CAMERA_MOVEMENT_STATIC = 1; // 固定
+  CAMERA_MOVEMENT_PAN = 2; // パン
+  CAMERA_MOVEMENT_TILT = 3; // チルト
+  CAMERA_MOVEMENT_ZOOM = 4; // ズーム
+  CAMERA_MOVEMENT_DOLLY = 5; // ドリー
+  CAMERA_MOVEMENT_TRACKING = 6; // トラッキング
+  CAMERA_MOVEMENT_CRANE = 7; // クレーン
+}
+
+// トランジション種別
+enum TransitionType {
+  TRANSITION_TYPE_UNSPECIFIED = 0;
+  TRANSITION_TYPE_CUT = 1; // カット
+  TRANSITION_TYPE_FADE = 2; // フェード
+  TRANSITION_TYPE_DISSOLVE = 3; // ディゾルブ
+  TRANSITION_TYPE_WIPE = 4; // ワイプ
+}
+
+// PTZ パラメータ
+message PTZParameters {
+  // パン角度 (-180.0 ~ 180.0 度)
+  float pan = 1;
+  // チルト角度 (-90.0 ~ 90.0 度)
+  float tilt = 2;
+  // ズーム倍率 (1.0 ~ 最大倍率)
+  float zoom = 3;
+  // パン速度 (0.0 ~ 1.0)
+  float pan_speed = 4;
+  // チルト速度 (0.0 ~ 1.0)
+  float tilt_speed = 5;
+  // ズーム速度 (0.0 ~ 1.0)
+  float zoom_speed = 6;
+}
+
+// 被写体情報
+message Subject {
+  // 被写体ID
+  string id = 1;
+  // 被写体種別 (person, object, area など)
+  string type = 2;
+  // 被写体名/ラベル
+  string label = 3;
+  // パターンマッチ用の参照画像URL (オプション)
+  string reference_image_url = 4;
+  // バウンディングボックス (正規化座標 0.0-1.0)
+  BoundingBox bounding_box = 5;
+}
+
+// バウンディングボックス
+message BoundingBox {
+  float x = 1; // 左上X座標 (0.0-1.0)
+  float y = 2; // 左上Y座標 (0.0-1.0)
+  float width = 3; // 幅 (0.0-1.0)
+  float height = 4; // 高さ (0.0-1.0)
+}
+
+// トランジション設定
+message TransitionConfig {
+  TransitionType type = 1;
+  // トランジション時間 (ミリ秒)
+  uint32 duration_ms = 2;
+}
+
+// シネマトグラフィー指示
+message CinematographyInstruction {
+  // 指示ID
+  string instruction_id = 1;
+  // 対象カメラID
+  string camera_id = 2;
+  // ショット種別
+  ShotType shot_type = 3;
+  // カメラアングル
+  CameraAngle camera_angle = 4;
+  // カメラムーブメント
+  CameraMovement camera_movement = 5;
+  // 対象被写体 (複数可)
+  repeated Subject subjects = 6;
+  // PTZ パラメータ (直接指定の場合)
+  PTZParameters ptz_parameters = 7;
+  // トランジション設定
+  TransitionConfig transition = 8;
+  // 優先度 (0-100, 高いほど優先)
+  uint32 priority = 9;
+  // 指示のタイムスタンプ (Unix ミリ秒)
+  int64 timestamp_ms = 10;
+}
+
+// シネマトグラフィー実行結果
+message CinematographyResult {
+  // 指示ID
+  string instruction_id = 1;
+  // 実行したカメラID
+  string camera_id = 2;
+  // 成功フラグ
+  bool success = 3;
+  // エラーメッセージ (失敗時)
+  string error_message = 4;
+  // 実際に適用されたPTZパラメータ
+  PTZParameters applied_ptz = 5;
+  // 実行完了タイムスタンプ (Unix ミリ秒)
+  int64 completed_at_ms = 6;
+}

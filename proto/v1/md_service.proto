@@ -1,0 +1,255 @@
+syntax = "proto3";
+
+package v1;
+
+import "v1/cinematography.proto";
+import "v1/cr_service.proto";
+
+option go_package = "github.com/anyfld/vistra-operation-control-room/gen/proto/v1;protov1";
+
+service MDService {
+  // シネマトグラフィー指示の受信 (LLM/EP から)
+  rpc ReceiveCinematographyInstruction(ReceiveCinematographyInstructionRequest) returns (ReceiveCinematographyInstructionResponse) {}
+  rpc StreamCinematographyInstructions(MDServiceStreamCinematographyInstructionsRequest) returns (stream MDServiceStreamCinematographyInstructionsResponse) {}
+
+  // シネマトグラフィー指示の FD への転送
+  rpc ForwardToFD(ForwardToFDRequest) returns (ForwardToFDResponse) {}
+
+  // 映像出力設定
+  rpc ConfigureVideoOutput(ConfigureVideoOutputRequest) returns (ConfigureVideoOutputResponse) {}
+  rpc GetVideoOutputStatus(GetVideoOutputStatusRequest) returns (GetVideoOutputStatusResponse) {}
+  rpc ListVideoOutputs(ListVideoOutputsRequest) returns (ListVideoOutputsResponse) {}
+
+  // 映像配信制御
+  rpc StartStreaming(StartStreamingRequest) returns (StartStreamingResponse) {}
+  rpc StopStreaming(StopStreamingRequest) returns (StopStreamingResponse) {}
+  rpc SwitchSource(SwitchSourceRequest) returns (SwitchSourceResponse) {}
+
+  // 配信ステータス
+  rpc GetStreamingStatus(GetStreamingStatusRequest) returns (GetStreamingStatusResponse) {}
+  rpc StreamStreamingEvents(StreamStreamingEventsRequest) returns (stream StreamStreamingEventsResponse) {}
+
+  // LLM連携
+  rpc SendToLLM(SendToLLMRequest) returns (SendToLLMResponse) {}
+  rpc ReceiveFromLLM(ReceiveFromLLMRequest) returns (stream ReceiveFromLLMResponse) {}
+}
+
+message ReceiveCinematographyInstructionRequest {
+  CinematographyInstruction instruction = 1;
+  // 指示元 (EP, LLM, API 等)
+  string source = 2;
+}
+
+message MDServiceStreamCinematographyInstructionsRequest {
+  // 対象カメラID
+  string camera_id = 1;
+}
+
+message MDServiceStreamCinematographyInstructionsResponse {
+  CinematographyInstruction instruction = 1;
+  int64 timestamp_ms = 2;
+}
+
+message ReceiveCinematographyInstructionResponse {
+  bool accepted = 1;
+  string instruction_id = 2;
+  // 拒否理由 (拒否時のみ)
+  string rejection_reason = 3;
+}
+
+message ForwardToFDRequest {
+  CinematographyInstruction instruction = 1;
+  // 対象FD ID (カメラID から自動解決も可)
+  string target_fd_id = 2;
+}
+
+message ForwardToFDResponse {
+  bool success = 1;
+  string error_message = 2;
+  // FD からの応答
+  CinematographyResult result = 3;
+}
+
+// 映像出力タイプ
+enum VideoOutputType {
+  VIDEO_OUTPUT_TYPE_UNSPECIFIED = 0;
+  VIDEO_OUTPUT_TYPE_SDI = 1;
+  VIDEO_OUTPUT_TYPE_NDI = 2;
+  VIDEO_OUTPUT_TYPE_HDMI = 3;
+  VIDEO_OUTPUT_TYPE_RTMP = 4;
+  VIDEO_OUTPUT_TYPE_HLS = 5;
+  VIDEO_OUTPUT_TYPE_WEBRTC = 6;
+}
+
+// 映像出力設定
+message VideoOutputConfig {
+  string id = 1;
+  string name = 2;
+  VideoOutputType type = 3;
+  // 出力先アドレス (該当する場合)
+  string destination = 4;
+  // 解像度
+  uint32 width = 5;
+  uint32 height = 6;
+  // フレームレート
+  uint32 framerate = 7;
+  // ビットレート (kbps)
+  uint32 bitrate_kbps = 8;
+  // コーデック
+  string codec = 9;
+  // 有効フラグ
+  bool enabled = 10;
+}
+
+// 映像出力ステータス
+enum VideoOutputStatus {
+  VIDEO_OUTPUT_STATUS_UNSPECIFIED = 0;
+  VIDEO_OUTPUT_STATUS_IDLE = 1;
+  VIDEO_OUTPUT_STATUS_STREAMING = 2;
+  VIDEO_OUTPUT_STATUS_ERROR = 3;
+}
+
+message VideoOutput {
+  VideoOutputConfig config = 1;
+  VideoOutputStatus status = 2;
+  // 現在のソースカメラID
+  string current_source_camera_id = 3;
+  // ストリーミング開始時刻
+  int64 streaming_started_at_ms = 4;
+  // 送信バイト数
+  uint64 bytes_sent = 5;
+  // エラーメッセージ
+  string error_message = 6;
+}
+
+message ConfigureVideoOutputRequest {
+  VideoOutputConfig config = 1;
+}
+
+message ConfigureVideoOutputResponse {
+  bool success = 1;
+  VideoOutput output = 2;
+}
+
+message GetVideoOutputStatusRequest {
+  string output_id = 1;
+}
+
+message GetVideoOutputStatusResponse {
+  VideoOutput output = 1;
+}
+
+message ListVideoOutputsRequest {
+  // フィルタ: 出力タイプ
+  repeated VideoOutputType type_filter = 1;
+  // フィルタ: ステータス
+  repeated VideoOutputStatus status_filter = 2;
+}
+
+message ListVideoOutputsResponse {
+  repeated VideoOutput outputs = 1;
+}
+
+message StartStreamingRequest {
+  // 出力ID
+  string output_id = 1;
+  // ソースカメラID
+  string source_camera_id = 2;
+}
+
+message StartStreamingResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message StopStreamingRequest {
+  string output_id = 1;
+}
+
+message StopStreamingResponse {
+  bool success = 1;
+}
+
+message SwitchSourceRequest {
+  string output_id = 1;
+  string new_source_camera_id = 2;
+  // トランジション設定
+  TransitionConfig transition = 3;
+}
+
+message SwitchSourceResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message GetStreamingStatusRequest {
+  // 出力ID (空の場合は全出力)
+  string output_id = 1;
+}
+
+message GetStreamingStatusResponse {
+  repeated VideoOutput outputs = 1;
+}
+
+message StreamStreamingEventsRequest {
+  // 監視対象出力ID (空の場合は全出力)
+  repeated string output_ids = 1;
+}
+
+// ストリーミングイベント種別
+enum StreamingEventType {
+  STREAMING_EVENT_TYPE_UNSPECIFIED = 0;
+  STREAMING_EVENT_TYPE_STARTED = 1;
+  STREAMING_EVENT_TYPE_STOPPED = 2;
+  STREAMING_EVENT_TYPE_SOURCE_SWITCHED = 3;
+  STREAMING_EVENT_TYPE_ERROR = 4;
+  STREAMING_EVENT_TYPE_RECOVERED = 5;
+}
+
+message StreamStreamingEventsResponse {
+  string output_id = 1;
+  StreamingEventType type = 2;
+  VideoOutput output = 3;
+  int64 timestamp_ms = 4;
+  // イベント詳細
+  string details = 5;
+}
+
+message SendToLLMRequest {
+  // プロンプト/クエリ
+  string prompt = 1;
+  // コンテキスト情報
+  LLMContext context = 2;
+}
+
+message SendToLLMResponse {
+  bool accepted = 1;
+  string request_id = 2;
+}
+
+message ReceiveFromLLMRequest {
+  string request_id = 1;
+}
+
+message ReceiveFromLLMResponse {
+  string request_id = 1;
+  // レスポンステキスト (ストリーミングの場合は部分テキスト)
+  string text = 2;
+  // シネマトグラフィー指示 (解析された場合)
+  CinematographyInstruction instruction = 3;
+  // 完了フラグ
+  bool is_complete = 4;
+  int64 timestamp_ms = 5;
+}
+
+// LLM コンテキスト
+message LLMContext {
+  // 現在のカメラ状態
+  repeated Camera camera_states = 1;
+  // 最近の指示履歴
+  repeated CinematographyInstruction recent_instructions = 2;
+  // シーン情報
+  string scene_description = 3;
+  // 追加コンテキスト
+  map<string, string> additional_context = 4;
+}

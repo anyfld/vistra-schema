@@ -1,0 +1,238 @@
+syntax = "proto3";
+
+package v1;
+
+import "v1/cinematography.proto";
+
+option go_package = "github.com/anyfld/vistra-operation-control-room/gen/proto/v1;protov1";
+
+service CRService {
+  // Master MF 管理
+  rpc RegisterMasterMF(RegisterMasterMFRequest) returns (RegisterMasterMFResponse) {}
+  rpc UnregisterMasterMF(UnregisterMasterMFRequest) returns (UnregisterMasterMFResponse) {}
+  rpc ListMasterMFs(ListMasterMFsRequest) returns (ListMasterMFsResponse) {}
+  rpc GetMasterMF(GetMasterMFRequest) returns (GetMasterMFResponse) {}
+
+  // システム全体のステータス
+  rpc GetSystemStatus(GetSystemStatusRequest) returns (GetSystemStatusResponse) {}
+  rpc StreamSystemStatus(StreamSystemStatusRequest) returns (stream StreamSystemStatusResponse) {}
+
+  // カメラ一覧・状態管理 (全Master MF横断)
+  rpc ListAllCameras(ListAllCamerasRequest) returns (ListAllCamerasResponse) {}
+  rpc GetCameraStatus(GetCameraStatusRequest) returns (GetCameraStatusResponse) {}
+
+  // 設定配布
+  rpc PushConfiguration(PushConfigurationRequest) returns (PushConfigurationResponse) {}
+  rpc GetConfiguration(GetConfigurationRequest) returns (GetConfigurationResponse) {}
+
+  // シネマトグラフィー指示 (LLM/外部からの入力)
+  rpc SendCinematographyInstruction(SendCinematographyInstructionRequest) returns (SendCinematographyInstructionResponse) {}
+  rpc StreamCinematographyResults(StreamCinematographyResultsRequest) returns (stream StreamCinematographyResultsResponse) {}
+}
+
+// Master MF の状態
+enum MasterMFStatus {
+  MASTER_MF_STATUS_UNSPECIFIED = 0;
+  MASTER_MF_STATUS_ONLINE = 1;
+  MASTER_MF_STATUS_OFFLINE = 2;
+  MASTER_MF_STATUS_ERROR = 3;
+  MASTER_MF_STATUS_MAINTENANCE = 4;
+}
+
+// Master MF 情報
+message MasterMF {
+  string id = 1;
+  string name = 2;
+  string ip_address = 3;
+  uint32 port = 4;
+  MasterMFStatus status = 5;
+  // 接続しているカメラ数
+  uint32 connected_camera_count = 6;
+  // 最終接続時刻 (Unix ミリ秒)
+  int64 last_seen_at_ms = 7;
+  // メタデータ
+  map<string, string> metadata = 8;
+}
+
+message RegisterMasterMFRequest {
+  string name = 1;
+  string ip_address = 2;
+  uint32 port = 3;
+  map<string, string> metadata = 4;
+}
+
+message RegisterMasterMFResponse {
+  MasterMF master_mf = 1;
+}
+
+message UnregisterMasterMFRequest {
+  string master_mf_id = 1;
+}
+
+message UnregisterMasterMFResponse {
+  bool success = 1;
+}
+
+message ListMasterMFsRequest {
+  // フィルタ: ステータス
+  repeated MasterMFStatus status_filter = 1;
+  // ページネーション
+  uint32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListMasterMFsResponse {
+  repeated MasterMF master_mfs = 1;
+  string next_page_token = 2;
+  uint32 total_count = 3;
+}
+
+message GetMasterMFRequest {
+  string master_mf_id = 1;
+}
+
+message GetMasterMFResponse {
+  MasterMF master_mf = 1;
+}
+
+// システム全体の状態
+enum SystemHealthStatus {
+  SYSTEM_HEALTH_STATUS_UNSPECIFIED = 0;
+  SYSTEM_HEALTH_STATUS_HEALTHY = 1;
+  SYSTEM_HEALTH_STATUS_DEGRADED = 2;
+  SYSTEM_HEALTH_STATUS_UNHEALTHY = 3;
+}
+
+message SystemStatus {
+  SystemHealthStatus health = 1;
+  // オンラインのMaster MF数
+  uint32 online_master_mf_count = 2;
+  // オンラインのカメラ数
+  uint32 online_camera_count = 3;
+  // アクティブなストリーム数
+  uint32 active_stream_count = 4;
+  // 最終更新時刻
+  int64 updated_at_ms = 5;
+}
+
+message GetSystemStatusRequest {}
+
+message GetSystemStatusResponse {
+  SystemStatus status = 1;
+}
+
+message StreamSystemStatusRequest {
+  // 更新間隔 (ミリ秒)
+  uint32 interval_ms = 1;
+}
+
+message StreamSystemStatusResponse {
+  SystemStatus status = 1;
+  int64 timestamp_ms = 2;
+}
+
+// カメラモード
+enum CameraMode {
+  CAMERA_MODE_UNSPECIFIED = 0;
+  CAMERA_MODE_AUTONOMOUS = 1;
+  CAMERA_MODE_LIGHTWEIGHT = 2;
+}
+
+// カメラステータス
+enum CameraStatus {
+  CAMERA_STATUS_UNSPECIFIED = 0;
+  CAMERA_STATUS_ONLINE = 1;
+  CAMERA_STATUS_OFFLINE = 2;
+  CAMERA_STATUS_STREAMING = 3;
+  CAMERA_STATUS_ERROR = 4;
+}
+
+// カメラ情報
+message Camera {
+  string id = 1;
+  string name = 2;
+  CameraMode mode = 3;
+  CameraStatus status = 4;
+  // 所属するMaster MF ID
+  string master_mf_id = 5;
+  // 現在のPTZ状態
+  PTZParameters current_ptz = 6;
+  // 最終接続時刻
+  int64 last_seen_at_ms = 7;
+  // メタデータ
+  map<string, string> metadata = 8;
+}
+
+message ListAllCamerasRequest {
+  // フィルタ: Master MF ID
+  string master_mf_id = 1;
+  // フィルタ: カメラモード
+  repeated CameraMode mode_filter = 2;
+  // フィルタ: ステータス
+  repeated CameraStatus status_filter = 3;
+  // ページネーション
+  uint32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListAllCamerasResponse {
+  repeated Camera cameras = 1;
+  string next_page_token = 2;
+  uint32 total_count = 3;
+}
+
+message GetCameraStatusRequest {
+  string camera_id = 1;
+}
+
+message GetCameraStatusResponse {
+  Camera camera = 1;
+}
+
+message Configuration {
+  string id = 1;
+  string version = 2;
+  // 設定内容 (JSON形式)
+  string config_json = 3;
+  // 作成日時
+  int64 created_at_ms = 4;
+}
+
+message PushConfigurationRequest {
+  // 対象Master MF ID (空の場合は全体に配布)
+  repeated string target_master_mf_ids = 1;
+  Configuration configuration = 2;
+}
+
+message PushConfigurationResponse {
+  bool success = 1;
+  // 配布に失敗したMaster MF ID
+  repeated string failed_master_mf_ids = 2;
+}
+
+message GetConfigurationRequest {
+  string master_mf_id = 1;
+}
+
+message GetConfigurationResponse {
+  Configuration configuration = 1;
+}
+
+message SendCinematographyInstructionRequest {
+  CinematographyInstruction instruction = 1;
+}
+
+message SendCinematographyInstructionResponse {
+  bool accepted = 1;
+  string instruction_id = 2;
+}
+
+message StreamCinematographyResultsRequest {
+  // フィルタ: カメラID (空の場合は全て)
+  repeated string camera_ids = 1;
+}
+
+message StreamCinematographyResultsResponse {
+  CinematographyResult result = 1;
+  int64 timestamp_ms = 2;
+}
