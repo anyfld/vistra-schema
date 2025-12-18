@@ -1,0 +1,212 @@
+syntax = "proto3";
+
+package v1;
+
+import "v1/cinematography.proto";
+import "v1/cr_service.proto";
+
+option go_package = "github.com/anyfld/vistra-operation-control-room/gen/proto/v1;protov1";
+
+service CameraService {
+  // カメラ登録・解除
+  rpc RegisterCamera(RegisterCameraRequest) returns (RegisterCameraResponse) {}
+  rpc UnregisterCamera(UnregisterCameraRequest) returns (UnregisterCameraResponse) {}
+  rpc UpdateCamera(UpdateCameraRequest) returns (UpdateCameraResponse) {}
+
+  // カメラ情報取得
+  rpc GetCamera(GetCameraRequest) returns (GetCameraResponse) {}
+  rpc ListCameras(ListCamerasRequest) returns (ListCamerasResponse) {}
+
+  // モード切替
+  rpc SwitchCameraMode(SwitchCameraModeRequest) returns (SwitchCameraModeResponse) {}
+
+  // 接続状態監視
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse) {}
+  rpc StreamConnectionStatus(StreamConnectionStatusRequest) returns (stream StreamConnectionStatusResponse) {}
+
+  // カメラ能力取得
+  rpc GetCameraCapabilities(GetCameraCapabilitiesRequest) returns (GetCameraCapabilitiesResponse) {}
+}
+
+// カメラ登録リクエスト
+message RegisterCameraRequest {
+  // カメラ名
+  string name = 1;
+  // カメラモード
+  CameraMode mode = 2;
+  // 所属するMaster MF ID
+  string master_mf_id = 3;
+  // カメラの接続情報
+  CameraConnection connection = 4;
+  // カメラの能力情報
+  CameraCapabilities capabilities = 5;
+  // メタデータ
+  map<string, string> metadata = 6;
+}
+
+message RegisterCameraResponse {
+  Camera camera = 1;
+}
+
+message UnregisterCameraRequest {
+  string camera_id = 1;
+}
+
+message UnregisterCameraResponse {
+  bool success = 1;
+}
+
+message UpdateCameraRequest {
+  string camera_id = 1;
+  // 更新するフィールド (設定されたフィールドのみ更新)
+  optional string name = 2;
+  optional CameraConnection connection = 3;
+  map<string, string> metadata = 4;
+}
+
+message UpdateCameraResponse {
+  Camera camera = 1;
+}
+
+// 接続タイプ
+enum ConnectionType {
+  CONNECTION_TYPE_UNSPECIFIED = 0;
+  CONNECTION_TYPE_ONVIF = 1; // ONVIF対応カメラ
+  CONNECTION_TYPE_NDI = 2; // NDI対応カメラ
+  CONNECTION_TYPE_USB_SERIAL = 3; // USBシリアル接続
+  CONNECTION_TYPE_WEBRTC = 4; // WebRTC接続
+  CONNECTION_TYPE_RTSP = 5; // RTSP接続
+}
+
+// カメラ接続情報
+message CameraConnection {
+  ConnectionType type = 1;
+  // 接続先アドレス (IP, URL, デバイスパス等)
+  string address = 2;
+  // ポート番号 (該当する場合)
+  uint32 port = 3;
+  // 認証情報
+  CameraCredentials credentials = 4;
+  // 追加パラメータ
+  map<string, string> parameters = 5;
+}
+
+// カメラ認証情報
+message CameraCredentials {
+  string username = 1;
+  string password = 2;
+  // 認証トークン (トークン認証の場合)
+  string token = 3;
+}
+
+message GetCameraRequest {
+  string camera_id = 1;
+}
+
+message GetCameraResponse {
+  Camera camera = 1;
+  CameraConnection connection = 2;
+  CameraCapabilities capabilities = 3;
+}
+
+message ListCamerasRequest {
+  // フィルタ: Master MF ID
+  string master_mf_id = 1;
+  // フィルタ: カメラモード
+  repeated CameraMode mode_filter = 2;
+  // フィルタ: ステータス
+  repeated CameraStatus status_filter = 3;
+  // ページネーション
+  uint32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListCamerasResponse {
+  repeated Camera cameras = 1;
+  string next_page_token = 2;
+  uint32 total_count = 3;
+}
+
+message SwitchCameraModeRequest {
+  string camera_id = 1;
+  CameraMode target_mode = 2;
+}
+
+message SwitchCameraModeResponse {
+  bool success = 1;
+  Camera camera = 2;
+  // 切替に失敗した理由
+  string error_message = 3;
+}
+
+message HeartbeatRequest {
+  string camera_id = 1;
+  // 現在のPTZ状態
+  PTZParameters current_ptz = 2;
+  // ステータス
+  CameraStatus status = 3;
+  // タイムスタンプ
+  int64 timestamp_ms = 4;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+  // サーバ側のタイムスタンプ
+  int64 server_timestamp_ms = 2;
+}
+
+message StreamConnectionStatusRequest {
+  // 監視対象カメラID (空の場合は全カメラ)
+  repeated string camera_ids = 1;
+}
+
+// 接続状態レスポンス (ストリーム)
+message StreamConnectionStatusResponse {
+  string camera_id = 1;
+  CameraStatus previous_status = 2;
+  CameraStatus current_status = 3;
+  int64 timestamp_ms = 4;
+  // 切断理由 (切断時のみ)
+  string disconnect_reason = 5;
+}
+
+// カメラ能力情報
+message CameraCapabilities {
+  // PTZ対応
+  bool supports_ptz = 1;
+  // パン範囲 (度)
+  float pan_min = 2;
+  float pan_max = 3;
+  // チルト範囲 (度)
+  float tilt_min = 4;
+  float tilt_max = 5;
+  // ズーム範囲
+  float zoom_min = 6;
+  float zoom_max = 7;
+  // 解像度
+  repeated Resolution supported_resolutions = 8;
+  // フレームレート
+  repeated uint32 supported_framerates = 9;
+  // プリセット数
+  uint32 preset_count = 10;
+  // オートフォーカス対応
+  bool supports_autofocus = 11;
+  // アーム対応
+  bool supports_arm = 12;
+  // 追加機能
+  repeated string additional_features = 13;
+}
+
+// 解像度
+message Resolution {
+  uint32 width = 1;
+  uint32 height = 2;
+}
+
+message GetCameraCapabilitiesRequest {
+  string camera_id = 1;
+}
+
+message GetCameraCapabilitiesResponse {
+  CameraCapabilities capabilities = 1;
+}

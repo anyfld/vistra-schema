@@ -1,0 +1,250 @@
+syntax = "proto3";
+
+package v1;
+
+import "v1/cinematography.proto";
+
+option go_package = "github.com/anyfld/vistra-operation-control-room/gen/proto/v1;protov1";
+
+service FDService {
+  // シネマトグラフィー指示の受信
+  rpc ExecuteCinematography(ExecuteCinematographyRequest) returns (ExecuteCinematographyResponse) {}
+  rpc StreamCinematographyInstructions(FDServiceStreamCinematographyInstructionsRequest) returns (stream FDServiceStreamCinematographyInstructionsResponse) {}
+
+  // 画像処理・パターンマッチ
+  rpc ProcessImage(ProcessImageRequest) returns (ProcessImageResponse) {}
+  rpc StartPatternMatching(StartPatternMatchingRequest) returns (StartPatternMatchingResponse) {}
+  rpc StopPatternMatching(StopPatternMatchingRequest) returns (StopPatternMatchingResponse) {}
+  rpc StreamPatternMatchResults(StreamPatternMatchResultsRequest) returns (stream StreamPatternMatchResultsResponse) {}
+
+  // 画角計算
+  rpc CalculateFraming(CalculateFramingRequest) returns (CalculateFramingResponse) {}
+
+  // CO への制御コマンド
+  rpc SendControlCommand(SendControlCommandRequest) returns (SendControlCommandResponse) {}
+  rpc StreamControlCommands(StreamControlCommandsRequest) returns (stream StreamControlCommandsResponse) {}
+
+  // カメラ状態の報告
+  rpc ReportCameraState(ReportCameraStateRequest) returns (ReportCameraStateResponse) {}
+  rpc GetCameraState(GetCameraStateRequest) returns (GetCameraStateResponse) {}
+}
+
+message ExecuteCinematographyRequest {
+  CinematographyInstruction instruction = 1;
+}
+
+message ExecuteCinematographyResponse {
+  CinematographyResult result = 1;
+}
+
+message FDServiceStreamCinematographyInstructionsRequest {
+  // フィルタ: 指示元
+  repeated string source_filter = 1;
+}
+
+message FDServiceStreamCinematographyInstructionsResponse {
+  CinematographyInstruction instruction = 1;
+  string source = 2;
+  int64 timestamp_ms = 3;
+}
+
+// 画像データ
+message ImageData {
+  // 画像フォーマット
+  ImageFormat format = 1;
+  // 画像データ (Base64エンコードまたはバイナリ)
+  bytes data = 2;
+  // 画像URL (外部参照の場合)
+  string url = 3;
+  // 幅
+  uint32 width = 4;
+  // 高さ
+  uint32 height = 5;
+  // タイムスタンプ
+  int64 timestamp_ms = 6;
+}
+
+enum ImageFormat {
+  IMAGE_FORMAT_UNSPECIFIED = 0;
+  IMAGE_FORMAT_JPEG = 1;
+  IMAGE_FORMAT_PNG = 2;
+  IMAGE_FORMAT_RAW = 3;
+}
+
+message ProcessImageRequest {
+  // 処理対象画像
+  ImageData image = 1;
+  // 検出対象の被写体
+  repeated Subject target_subjects = 2;
+}
+
+message ProcessImageResponse {
+  // 検出された被写体
+  repeated DetectedSubject detected_subjects = 1;
+  // 処理時間 (ミリ秒)
+  uint32 processing_time_ms = 2;
+}
+
+// 検出された被写体
+message DetectedSubject {
+  Subject subject = 1;
+  // 検出信頼度 (0.0-1.0)
+  float confidence = 2;
+  // 検出されたバウンディングボックス
+  BoundingBox detected_box = 3;
+}
+
+message StartPatternMatchingRequest {
+  // 対象カメラID
+  string camera_id = 1;
+  // マッチング対象の被写体
+  repeated Subject target_subjects = 2;
+  // マッチング間隔 (ミリ秒)
+  uint32 interval_ms = 3;
+}
+
+message StartPatternMatchingResponse {
+  bool success = 1;
+  string session_id = 2;
+}
+
+message StopPatternMatchingRequest {
+  string session_id = 1;
+}
+
+message StopPatternMatchingResponse {
+  bool success = 1;
+}
+
+message StreamPatternMatchResultsRequest {
+  string session_id = 1;
+}
+
+message StreamPatternMatchResultsResponse {
+  string session_id = 1;
+  string camera_id = 2;
+  repeated DetectedSubject detected_subjects = 3;
+  int64 timestamp_ms = 4;
+}
+
+message CalculateFramingRequest {
+  // 対象カメラID
+  string camera_id = 1;
+  // 現在のPTZ状態
+  PTZParameters current_ptz = 2;
+  // ターゲットのショット種別
+  ShotType target_shot_type = 3;
+  // ターゲットの被写体
+  repeated DetectedSubject target_subjects = 4;
+  // カメラアングル
+  CameraAngle target_angle = 5;
+}
+
+message CalculateFramingResponse {
+  // 計算されたPTZパラメータ
+  PTZParameters calculated_ptz = 1;
+  // 推定移動時間 (ミリ秒)
+  uint32 estimated_move_time_ms = 2;
+  // 計算成功フラグ
+  bool success = 3;
+  // エラーメッセージ
+  string error_message = 4;
+}
+
+// 制御コマンド種別
+enum ControlCommandType {
+  CONTROL_COMMAND_TYPE_UNSPECIFIED = 0;
+  CONTROL_COMMAND_TYPE_PTZ_ABSOLUTE = 1; // 絶対位置指定
+  CONTROL_COMMAND_TYPE_PTZ_RELATIVE = 2; // 相対位置指定
+  CONTROL_COMMAND_TYPE_PTZ_CONTINUOUS = 3; // 連続移動
+  CONTROL_COMMAND_TYPE_PTZ_STOP = 4; // 停止
+  CONTROL_COMMAND_TYPE_PRESET_GOTO = 5; // プリセット移動
+  CONTROL_COMMAND_TYPE_PRESET_SET = 6; // プリセット保存
+  CONTROL_COMMAND_TYPE_FOCUS = 7; // フォーカス制御
+  CONTROL_COMMAND_TYPE_ARM = 8; // アーム制御
+}
+
+// 制御コマンド
+message ControlCommand {
+  string command_id = 1;
+  string camera_id = 2;
+  ControlCommandType type = 3;
+  // PTZ パラメータ (PTZ系コマンドの場合)
+  PTZParameters ptz_parameters = 4;
+  // プリセット番号 (プリセット系コマンドの場合)
+  uint32 preset_number = 5;
+  // フォーカス値 (0.0-1.0, フォーカスコマンドの場合)
+  float focus_value = 6;
+  // アーム制御パラメータ (アームコマンドの場合)
+  ArmParameters arm_parameters = 7;
+  // タイムアウト (ミリ秒)
+  uint32 timeout_ms = 8;
+}
+
+// アーム制御パラメータ
+message ArmParameters {
+  // 各軸の角度 (度)
+  repeated float joint_angles = 1;
+  // 移動速度 (0.0-1.0)
+  float speed = 2;
+}
+
+// 制御コマンド結果
+message ControlCommandResult {
+  string command_id = 1;
+  bool success = 2;
+  string error_message = 3;
+  // 実行後のPTZ状態
+  PTZParameters resulting_ptz = 4;
+  // 実行時間 (ミリ秒)
+  uint32 execution_time_ms = 5;
+}
+
+message SendControlCommandRequest {
+  ControlCommand command = 1;
+}
+
+message SendControlCommandResponse {
+  ControlCommandResult result = 1;
+}
+
+message StreamControlCommandsRequest {
+  string camera_id = 1;
+}
+
+message StreamControlCommandsResponse {
+  ControlCommand command = 1;
+  int64 timestamp_ms = 2;
+}
+
+// カメラ状態
+message CameraState {
+  string camera_id = 1;
+  // 現在のPTZ状態
+  PTZParameters current_ptz = 2;
+  // 移動中フラグ
+  bool is_moving = 3;
+  // エラー状態
+  bool has_error = 4;
+  string error_message = 5;
+  // フォーカス値
+  float current_focus = 6;
+  // 更新時刻
+  int64 updated_at_ms = 7;
+}
+
+message ReportCameraStateRequest {
+  CameraState state = 1;
+}
+
+message ReportCameraStateResponse {
+  bool acknowledged = 1;
+}
+
+message GetCameraStateRequest {
+  string camera_id = 1;
+}
+
+message GetCameraStateResponse {
+  CameraState state = 1;
+}
