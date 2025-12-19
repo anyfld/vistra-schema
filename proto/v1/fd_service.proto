@@ -22,8 +22,7 @@ service FDService {
   rpc CalculateFraming(CalculateFramingRequest) returns (CalculateFramingResponse) {}
 
   // CO への制御コマンド
-  rpc SendControlCommand(SendControlCommandRequest) returns (SendControlCommandResponse) {}
-  rpc StreamControlCommands(stream StreamControlCommandsRequest) returns (stream StreamControlCommandsResponse) {}
+  rpc StreamControlCommands(StreamControlCommandsRequest) returns (StreamControlCommandsResponse) {}
 }
 
 message ExecuteCinematographyRequest {
@@ -197,18 +196,11 @@ message ControlCommandResult {
   uint32 execution_time_ms = 5;
 }
 
-message SendControlCommandRequest {
-  ControlCommand command = 1;
-}
-
-message SendControlCommandResponse {
-  ControlCommandResult result = 1;
-}
-
 message StreamControlCommandsRequest {
-  // ストリーム開始時の初期化情報
+  // 最初のポーリング呼び出し時の初期化情報や、
+  // コマンド・結果・状態の送信に使用されるメッセージ
   oneof message {
-    // ストリーム開始時の初期化（最初のメッセージで必須）
+    // 最初のポーリング呼び出し時の初期化（最初のメッセージで必須）
     StreamControlCommandsInit init = 1;
     // コマンドの送信（クライアント→サーバー）
     ControlCommand command = 2;
@@ -229,7 +221,7 @@ message StreamControlCommandsResponse {
     ControlCommand command = 1;
     // コマンド実行結果の返却（サーバー→クライアント）
     ControlCommandResult result = 2;
-    // ストリーム状態の通知
+    // ポーリングチャネル状態の通知
     StreamControlCommandsStatus status = 3;
   }
   int64 timestamp_ms = 4;
