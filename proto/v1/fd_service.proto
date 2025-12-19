@@ -24,10 +24,6 @@ service FDService {
   // CO への制御コマンド
   rpc SendControlCommand(SendControlCommandRequest) returns (SendControlCommandResponse) {}
   rpc StreamControlCommands(stream StreamControlCommandsRequest) returns (stream StreamControlCommandsResponse) {}
-
-  // カメラ状態の報告
-  rpc ReportCameraState(ReportCameraStateRequest) returns (ReportCameraStateResponse) {}
-  rpc GetCameraState(GetCameraStateRequest) returns (GetCameraStateResponse) {}
 }
 
 message ExecuteCinematographyRequest {
@@ -260,20 +256,4 @@ message CameraState {
   int64 updated_at_ms = 7;
   // カメラ接続・動作ステータス
   CameraStatus status = 8;
-}
-
-message ReportCameraStateRequest {
-  CameraState state = 1;
-}
-
-message ReportCameraStateResponse {
-  bool acknowledged = 1;
-}
-
-message GetCameraStateRequest {
-  string camera_id = 1;
-}
-
-message GetCameraStateResponse {
-  CameraState state = 1;
 }
