@@ -161,6 +161,8 @@ message Camera {
   int64 last_seen_at_ms = 7;
   // メタデータ
   map<string, string> metadata = 8;
+  // 視聴用WebRTC接続名
+  string webrtc_connection_name = 9;
 }
 
 message ListAllCamerasRequest {
