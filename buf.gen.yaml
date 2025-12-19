@@ -24,6 +24,6 @@ plugins:
       - target=ts
 
   - remote: buf.build/protocolbuffers/python
-    out: ../vistra-director/poc/gen/proto
+    out: ../vistra-director/gen/proto
   - remote: buf.build/connectrpc/python
-    out: ../vistra-director/poc/gen/proto
+    out: ../vistra-director/gen/proto
