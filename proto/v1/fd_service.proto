@@ -22,7 +22,7 @@ service FDService {
 
   // CO への制御コマンド
   rpc SendControlCommand(SendControlCommandRequest) returns (SendControlCommandResponse) {}
-  rpc StreamControlCommands(StreamControlCommandsRequest) returns (stream StreamControlCommandsResponse) {}
+  rpc StreamControlCommands(stream StreamControlCommandsRequest) returns (stream StreamControlCommandsResponse) {}
 
   // カメラ状態の報告
   rpc ReportCameraState(ReportCameraStateRequest) returns (ReportCameraStateResponse) {}
@@ -209,12 +209,38 @@ message SendControlCommandResponse {
 }
 
 message StreamControlCommandsRequest {
+  // ストリーム開始時の初期化情報
+  oneof message {
+    // ストリーム開始時の初期化（最初のメッセージで必須）
+    StreamControlCommandsInit init = 1;
+    // コマンドの送信（クライアント→サーバー）
+    ControlCommand command = 2;
+    // コマンド実行結果の報告（クライアント→サーバー）
+    ControlCommandResult result = 3;
+    // カメラ状態の報告（クライアント→サーバー）
+    CameraState state = 4;
+  }
+}
+
+message StreamControlCommandsInit {
   string camera_id = 1;
 }
 
 message StreamControlCommandsResponse {
-  ControlCommand command = 1;
-  int64 timestamp_ms = 2;
+  oneof message {
+    // コマンドの配信（サーバー→クライアント）
+    ControlCommand command = 1;
+    // コマンド実行結果の返却（サーバー→クライアント）
+    ControlCommandResult result = 2;
+    // ストリーム状態の通知
+    StreamControlCommandsStatus status = 3;
+  }
+  int64 timestamp_ms = 4;
+}
+
+message StreamControlCommandsStatus {
+  bool connected = 1;
+  string message = 2;
 }
 
 // カメラ状態
