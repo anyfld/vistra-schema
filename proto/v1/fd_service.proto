@@ -216,14 +216,12 @@ message StreamControlCommandsInit {
 }
 
 message StreamControlCommandsResponse {
-  oneof message {
-    // コマンドの配信（サーバー→クライアント）
-    ControlCommand command = 1;
-    // コマンド実行結果の返却（サーバー→クライアント）
-    ControlCommandResult result = 2;
-    // ポーリングチャネル状態の通知
-    StreamControlCommandsStatus status = 3;
-  }
+  // コマンドの配信（サーバー→クライアント）
+  ControlCommand command = 1;
+  // コマンド実行結果の返却（サーバー→クライアント）
+  ControlCommandResult result = 2;
+  // ポーリングチャネル状態の通知
+  StreamControlCommandsStatus status = 3;
   int64 timestamp_ms = 4;
 }
 
