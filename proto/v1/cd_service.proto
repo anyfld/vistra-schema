@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package v1;
 
-import "v1/cinematography.proto";
 import "v1/cr_service.proto";
 
 option go_package = "github.com/anyfld/vistra-operation-control-room/gen/proto/v1;protov1";
@@ -20,12 +19,8 @@ service CameraService {
   // モード切替
   rpc SwitchCameraMode(SwitchCameraModeRequest) returns (SwitchCameraModeResponse) {}
 
-  // 接続状態監視
-  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse) {}
+  // 接続状態監視 (ストリーム上の状態更新に基づく)
   rpc StreamConnectionStatus(StreamConnectionStatusRequest) returns (stream StreamConnectionStatusResponse) {}
-
-  // カメラ能力取得
-  rpc GetCameraCapabilities(GetCameraCapabilitiesRequest) returns (GetCameraCapabilitiesResponse) {}
 }
 
 // カメラ登録リクエスト
@@ -139,22 +134,6 @@ message SwitchCameraModeResponse {
   string error_message = 3;
 }
 
-message HeartbeatRequest {
-  string camera_id = 1;
-  // 現在のPTZ状態
-  PTZParameters current_ptz = 2;
-  // ステータス
-  CameraStatus status = 3;
-  // タイムスタンプ
-  int64 timestamp_ms = 4;
-}
-
-message HeartbeatResponse {
-  bool acknowledged = 1;
-  // サーバ側のタイムスタンプ
-  int64 server_timestamp_ms = 2;
-}
-
 message StreamConnectionStatusRequest {
   // 監視対象カメラID (空の場合は全カメラ)
   repeated string camera_ids = 1;
@@ -203,10 +182,3 @@ message Resolution {
   uint32 height = 2;
 }
 
-message GetCameraCapabilitiesRequest {
-  string camera_id = 1;
-}
-
-message GetCameraCapabilitiesResponse {
-  CameraCapabilities capabilities = 1;
-}
