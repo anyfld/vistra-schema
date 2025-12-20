@@ -3,6 +3,7 @@ syntax = "proto3";
 package v1;
 
 import "v1/cinematography.proto";
+import "v1/cr_service.proto";
 
 option go_package = "github.com/anyfld/vistra-operation-control-room/gen/proto/v1;protov1";
 
@@ -21,12 +22,7 @@ service FDService {
   rpc CalculateFraming(CalculateFramingRequest) returns (CalculateFramingResponse) {}
 
   // CO への制御コマンド
-  rpc SendControlCommand(SendControlCommandRequest) returns (SendControlCommandResponse) {}
-  rpc StreamControlCommands(StreamControlCommandsRequest) returns (stream StreamControlCommandsResponse) {}
-
-  // カメラ状態の報告
-  rpc ReportCameraState(ReportCameraStateRequest) returns (ReportCameraStateResponse) {}
-  rpc GetCameraState(GetCameraStateRequest) returns (GetCameraStateResponse) {}
+  rpc StreamControlCommands(StreamControlCommandsRequest) returns (StreamControlCommandsResponse) {}
 }
 
 message ExecuteCinematographyRequest {
@@ -200,21 +196,38 @@ message ControlCommandResult {
   uint32 execution_time_ms = 5;
 }
 
-message SendControlCommandRequest {
-  ControlCommand command = 1;
-}
-
-message SendControlCommandResponse {
-  ControlCommandResult result = 1;
-}
-
 message StreamControlCommandsRequest {
+  // 最初のポーリング呼び出し時の初期化情報や、
+  // コマンド・結果・状態の送信に使用されるメッセージ
+  oneof message {
+    // 最初のポーリング呼び出し時の初期化（最初のメッセージで必須）
+    StreamControlCommandsInit init = 1;
+    // コマンドの送信（クライアント→サーバー）
+    ControlCommand command = 2;
+    // コマンド実行結果の報告（クライアント→サーバー）
+    ControlCommandResult result = 3;
+    // カメラ状態の報告（クライアント→サーバー）
+    CameraState state = 4;
+  }
+}
+
+message StreamControlCommandsInit {
   string camera_id = 1;
 }
 
 message StreamControlCommandsResponse {
+  // コマンドの配信（サーバー→クライアント）
   ControlCommand command = 1;
-  int64 timestamp_ms = 2;
+  // コマンド実行結果の返却（サーバー→クライアント）
+  ControlCommandResult result = 2;
+  // ポーリングチャネル状態の通知
+  StreamControlCommandsStatus status = 3;
+  int64 timestamp_ms = 4;
+}
+
+message StreamControlCommandsStatus {
+  bool connected = 1;
+  string message = 2;
 }
 
 // カメラ状態
@@ -231,20 +244,6 @@ message CameraState {
   float current_focus = 6;
   // 更新時刻
   int64 updated_at_ms = 7;
-}
-
-message ReportCameraStateRequest {
-  CameraState state = 1;
-}
-
-message ReportCameraStateResponse {
-  bool acknowledged = 1;
-}
-
-message GetCameraStateRequest {
-  string camera_id = 1;
-}
-
-message GetCameraStateResponse {
-  CameraState state = 1;
+  // カメラ接続・動作ステータス
+  CameraStatus status = 8;
 }

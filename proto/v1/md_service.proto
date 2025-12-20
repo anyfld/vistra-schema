@@ -31,7 +31,7 @@ service MDService {
 
   // LLM連携
   rpc SendToLLM(SendToLLMRequest) returns (SendToLLMResponse) {}
-  rpc ReceiveFromLLM(ReceiveFromLLMRequest) returns (stream ReceiveFromLLMResponse) {}
+  rpc ReceiveFromLLM(ReceiveFromLLMRequest) returns (ReceiveFromLLMResponse) {}
 }
 
 message ReceiveCinematographyInstructionRequest {
@@ -233,7 +233,7 @@ message ReceiveFromLLMRequest {
 
 message ReceiveFromLLMResponse {
   string request_id = 1;
-  // レスポンステキスト (ストリーミングの場合は部分テキスト)
+  // レスポンステキスト
   string text = 2;
   // シネマトグラフィー指示 (解析された場合)
   CinematographyInstruction instruction = 3;
