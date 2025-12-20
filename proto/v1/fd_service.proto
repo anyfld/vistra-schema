@@ -20,9 +20,6 @@ service FDService {
 
   // 画角計算
   rpc CalculateFraming(CalculateFramingRequest) returns (CalculateFramingResponse) {}
-
-  // CO への制御コマンド
-  rpc StreamControlCommands(StreamControlCommandsRequest) returns (StreamControlCommandsResponse) {}
 }
 
 message ExecuteCinematographyRequest {
@@ -194,40 +191,6 @@ message ControlCommandResult {
   PTZParameters resulting_ptz = 4;
   // 実行時間 (ミリ秒)
   uint32 execution_time_ms = 5;
-}
-
-message StreamControlCommandsRequest {
-  // 最初のポーリング呼び出し時の初期化情報や、
-  // コマンド・結果・状態の送信に使用されるメッセージ
-  oneof message {
-    // 最初のポーリング呼び出し時の初期化（最初のメッセージで必須）
-    StreamControlCommandsInit init = 1;
-    // コマンドの送信（クライアント→サーバー）
-    ControlCommand command = 2;
-    // コマンド実行結果の報告（クライアント→サーバー）
-    ControlCommandResult result = 3;
-    // カメラ状態の報告（クライアント→サーバー）
-    CameraState state = 4;
-  }
-}
-
-message StreamControlCommandsInit {
-  string camera_id = 1;
-}
-
-message StreamControlCommandsResponse {
-  // コマンドの配信（サーバー→クライアント）
-  ControlCommand command = 1;
-  // コマンド実行結果の返却（サーバー→クライアント）
-  ControlCommandResult result = 2;
-  // ポーリングチャネル状態の通知
-  StreamControlCommandsStatus status = 3;
-  int64 timestamp_ms = 4;
-}
-
-message StreamControlCommandsStatus {
-  bool connected = 1;
-  string message = 2;
 }
 
 // カメラ状態
